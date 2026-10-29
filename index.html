@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nori - เว็บไซต์รีวิว</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Mali (หัวข้อน่ารัก) & Anuphan (เนื้อหามินิมอลอ่านง่าย) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600&family=Mali:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cute: ['Mali', 'cursive', 'sans-serif'],
+                        sans: ['Anuphan', 'sans-serif'],
+                    },
+                    colors: {
+                        nori: {
+                            bg: '#FDF8FF',
+                            pinkLight: '#FCE7F3',
+                            pink: '#F472B6',
+                            purpleLight: '#F3E8FF',
+                            purple: '#C084FC',
+                            purpleDark: '#6B21A8',
+                            text: '#4A355A',
+                            muted: '#937DA6'
+                        }
+                    },
+                    boxShadow: {
+                        'pastel': '0 10px 30px -5px rgba(216, 180, 254, 0.28), 0 4px 12px -2px rgba(249, 168, 212, 0.2)',
+                        'pastel-hover': '0 16px 36px -5px rgba(192, 132, 252, 0.38), 0 6px 16px -2px rgba(244, 114, 182, 0.25)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #FDF8FF;
+            background-image: 
+                radial-gradient(at 15% 15%, rgba(252, 231, 243, 0.7) 0px, transparent 50%),
+                radial-gradient(at 85% 80%, rgba(243, 232, 255, 0.7) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #4A355A;
+        }
+        /* ตกแต่ง Scrollbar ให้เข้ากับธีม */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FDF8FF;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #E9D5FF;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D8B4FE;
+        }
+        .card-transition {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .card-transition:hover {
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body class="font-sans min-h-screen pb-20 selection:bg-pink-200 selection:text-purple-900">
+
+    <!-- แถบควบคุมโหมดมุมมอง (ลอยด้านบนขวา ไม่รบกวนโครงร่างหลัก) -->
+    <div class="fixed top-4 right-4 z-40 flex items-center gap-2 bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-pastel border border-purple-100">
+        <button id="btnCustomerView" onclick="switchMode('customer')" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all bg-gradient-to-r from-pink-400 to-purple-400 text-white shadow-sm">
+            <i class="ph-fill ph-sparkle"></i> มุมมองลูกค้า
+        </button>
+        <button id="btnAdminView" onclick="switchMode('admin')" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all text-nori-muted hover:text-nori-text">
+            <i class="ph-fill ph-gear text-base"></i> หลังบ้านแอดมิน (Demo)
+        </button>
+    </div>
+
+    <!-- แถบแจ้งเตือนสถานะโหมดแอดมิน (แสดงเฉพาะตอนเปิดโหมดแอดมิน) -->
+    <div id="adminNoticeBar" class="hidden bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 border-b border-purple-200 py-2.5 px-4 text-center text-xs sm:text-sm text-purple-800">
+        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-2">
+            <span class="bg-purple-600 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold">โหมดแอดมิน (Demo)</span>
+            <span>คุณสามารถคลิกแก้ไขรูปแบนเนอร์ โลโก้ ชื่อเว็บ หรือลบ/แก้ไขการ์ดรีวิวด้านล่างได้ทันที (ข้อมูลจำลองในเบราว์เซอร์)</span>
+            <button onclick="resetDemoData()" class="underline font-medium text-pink-600 hover:text-pink-800 ml-2">รีเซ็ตค่าเริ่มต้น</button>
+        </div>
+    </div>
+
+    <!-- โครงสร้างหลักตามภาพแบบร่าง (Main Container) -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12">
+
+        <!-- ==========================================
+             1. ส่วนบนสุด: รูปแบนเนอร์ (Banner Box)
+             + 2. วงกลมตรงกลาง: โลโก้ (Overlapping Circle Logo)
+             ========================================== -->
+        <section class="relative mb-20 sm:mb-24">
+            <!-- กรอบสี่เหลี่ยมแบนเนอร์ด้านบน -->
+            <div class="relative w-full h-48 sm:h-64 md:h-72 rounded-[2rem] overflow-hidden shadow-pastel border-4 border-white bg-gradient-to-r from-pink-100 via-purple-100 to-pink-100 group">
+                <img id="siteBannerImg" 
+                     src="https://i.postimg.cc/DyG5vRsy/Crkh-m-phaerw-s-thth-chi-s-wnt-w.png" 
+                     onerror="this.src='https://placehold.co/1200x450/FCE7F3/9333EA?text=Demo+Banner+(Nori)'"
+                     alt="Nori Banner" 
+                     class="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105">
+                
+                <!-- โอเวอร์เลย์ไล่สีอ่อนๆ ให้ดูละมุน -->
+                <div class="absolute inset-0 bg-gradient-to-t from-purple-900/15 via-transparent to-transparent pointer-events-none"></div>
+
+                <!-- ปุ่มแก้ไขแบนเนอร์ (แสดงเฉพาะโหมดแอดมิน) -->
+                <button onclick="openSiteModal('banner')" class="admin-only hidden absolute top-4 left-4 bg-white/95 hover:bg-white text-purple-700 px-3.5 py-2 rounded-full text-xs font-medium shadow-md flex items-center gap-1.5 transition-transform active:scale-95">
+                    <i class="ph-bold ph-image text-pink-500 text-base"></i> เปลี่ยนรูปแบนเนอร์
+                </button>
+            </div>
+
+            <!-- วงกลมโลโก้ตรงกลาง ซ้อนทับขอบล่างของแบนเนอร์ตรงตามภาพร่าง -->
+            <div class="absolute left-1/2 -bottom-14 sm:-bottom-16 -translate-x-1/2 z-10">
+                <div class="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full p-1.5 bg-white shadow-pastel group">
+                    <div class="w-full h-full rounded-full overflow-hidden border-2 border-pink-100 bg-pink-50">
+                        <img id="siteLogoImg" 
+                             src="https://i.postimg.cc/DyG5vRsy/Crkh-m-phaerw-s-thth-chi-s-wnt-w.png" 
+                             onerror="this.src='https://placehold.co/300x300/F3E8FF/9333EA?text=Nori+Logo'"
+                             alt="Nori Logo" 
+                             class="w-full h-full object-cover">
+                    </div>
+
+                    <!-- ปุ่มแก้ไขโลโก้ (แสดงเฉพาะโหมดแอดมิน) -->
+                    <button onclick="openSiteModal('logo')" title="เปลี่ยนรูปโลโก้" class="admin-only hidden absolute bottom-0 right-0 bg-pink-500 hover:bg-pink-600 text-white w-9 h-9 rounded-full shadow-md flex items-center justify-center border-2 border-white transition-transform active:scale-90">
+                        <i class="ph-bold ph-camera text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             3. ส่วนชื่อเว็บใต้โลโก้ (Website Title)
+             ========================================== -->
+        <section class="text-center mb-10 sm:mb-14 relative">
+            <div class="inline-flex items-center justify-center gap-2 relative">
+                <h1 id="siteNameText" class="font-cute text-3xl sm:text-4xl font-bold text-nori-text tracking-wide">
+                    Nori
+                </h1>
+                <!-- ปุ่มแก้ไขชื่อเว็บ (แสดงเฉพาะโหมดแอดมิน) -->
+                <button onclick="openSiteModal('name')" title="แก้ไขชื่อเว็บและคำโปรย" class="admin-only hidden bg-purple-100 hover:bg-purple-200 text-purple-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                    <i class="ph-bold ph-pencil-simple text-sm"></i>
+                </button>
+            </div>
+            <p id="siteTaglineText" class="text-sm sm:text-base text-nori-muted mt-1.5 max-w-md mx-auto">
+                พื้นที่รวมรีวิวความประทับใจและเสียงตอบรับจากลูกค้าที่น่ารักของเรา 🌷✨
+            </p>
+            
+            <!-- สรุปคะแนนรีวิวเล็กๆ เพิ่มความสมบูรณ์ให้เว็บรีวิวโดยไม่เสียโครงหลัก -->
+            <div class="mt-4 inline-flex items-center gap-3 bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border border-pink-100 shadow-sm text-xs sm:text-sm">
+                <span class="flex items-center gap-1 text-amber-400 font-semibold">
+                    <i class="ph-fill ph-star"></i> <span id="avgRatingText">5.0</span>
+                </span>
+                <span class="text-purple-200">|</span>
+                <span class="text-nori-muted">รีวิวทั้งหมด <strong id="totalReviewsText" class="text-purple-600">5</strong> รายการ</span>
+            </div>
+
+            <!-- ปุ่มเขียนรีวิวดีไซน์น่ารัก วางตำแหน่งตรงกลางที่กดสะดวกก่อนเข้าสู่รายการรีวิว -->
+            <div class="mt-6 flex justify-center">
+                <button onclick="openReviewModal()" class="group relative inline-flex items-center gap-3 bg-white hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 p-2 pr-6 rounded-full shadow-pastel hover:shadow-pastel-hover border-2 border-pink-200/80 transition-all duration-300 hover:-translate-y-1 active:scale-95">
+                    <span class="w-11 h-11 rounded-full bg-gradient-to-tr from-pink-400 to-purple-400 text-white flex items-center justify-center shadow-sm group-hover:rotate-12 transition-transform duration-300">
+                        <i class="ph-fill ph-pencil-line text-xl"></i>
+                    </span>
+                    <div class="text-left">
+                        <span class="block font-cute font-bold text-sm sm:text-base text-nori-text group-hover:text-pink-600 transition-colors">
+                            เขียนรีวิวความประทับใจ 🎀
+                        </span>
+                        <span class="block text-[11px] text-nori-muted">
+                            คลิกเพื่อแบ่งปันเรื่องราวน่ารักๆ ให้ Nori
+                        </span>
+                    </div>
+                    <span class="ml-1 text-pink-400 group-hover:translate-x-1 transition-transform">
+                        <i class="ph-bold ph-caret-right"></i>
+                    </span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             4. ส่วนเนื้อหาด้านล่าง: กรอบสี่เหลี่ยมวางสลับซ้าย-ขวา
+             (เรียงสลับไปมาซ้าย-ขวาอย่างเป็นระเบียบตามภาพแบบร่าง)
+             ========================================== -->
+        <section aria-label="รายการรีวิวและการเขียนรีวิว">
+            <div id="reviewsZigzagContainer" class="flex flex-col gap-5 sm:gap-6">
+                <!-- การ์ดรีวิวแบบเรียงสลับซ้าย-ขวาอย่างเป็นระเบียบจะถูกสร้างด้วย JavaScript -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ปุ่มลอยสำหรับเขียนรีวิว (Floating Action Button) ช่วยให้กดสะดวกทุกเวลาแม้เลื่อนหน้าจอลงมาด้านล่าง -->
+    <button onclick="openReviewModal()" title="เขียนรีวิว" class="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white px-4 py-3 sm:px-5 sm:py-3.5 rounded-full shadow-pastel-hover border-2 border-white transition-all duration-300 hover:scale-105 active:scale-95">
+        <i class="ph-fill ph-sparkle text-lg"></i>
+        <span class="font-cute font-bold text-xs sm:text-sm">เขียนรีวิว</span>
+    </button>
+
+    <!-- ==========================================
+         MODAL 1: สำหรับลูกค้าเขียนรีวิว หรือ แอดมินแก้ไขรีวิว
+         ========================================== -->
+    <div id="reviewModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-purple-950/30 backdrop-blur-sm">
+        <div class="bg-white rounded-[2rem] max-w-md w-full p-6 sm:p-7 shadow-2xl border border-pink-100 animate-fadeIn">
+            <div class="flex items-center justify-between mb-5">
+                <h3 id="reviewModalTitle" class="font-cute text-xl font-bold text-nori-text flex items-center gap-2">
+                    <i class="ph-fill ph-ShootingStar text-pink-400"></i> เขียนรีวิวความประทับใจ
+                </h3>
+                <button onclick="closeReviewModal()" class="w-8 h-8 rounded-full bg-purple-50 hover:bg-purple-100 text-nori-muted flex items-center justify-center">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <form id="reviewForm" onsubmit="submitReviewForm(event)" class="space-y-4">
+                <input type="hidden" id="editReviewId" value="">
+
+                <div>
+                    <label class="block text-xs font-medium text-nori-text mb-1.5">ชื่อของคุณ <span class="text-pink-500">*</span></label>
+                    <input type="text" id="reviewerNameInput" required placeholder="เช่น คุณเมย์, ลูกค้าประจำ" 
+                           class="w-full px-4 py-2.5 rounded-2xl bg-nori-bg border border-purple-100 focus:border-pink-300 focus:outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-nori-text mb-1.5">ระดับความประทับใจ</label>
+                    <div class="flex items-center gap-2" id="starSelector">
+                        <button type="button" onclick="setStarRating(1)" class="star-btn text-2xl text-amber-400 transition-transform hover:scale-110"><i class="ph-fill ph-star"></i></button>
+                        <button type="button" onclick="setStarRating(2)" class="star-btn text-2xl text-amber-400 transition-transform hover:scale-110"><i class="ph-fill ph-star"></i></button>
+                        <button type="button" onclick="setStarRating(3)" class="star-btn text-2xl text-amber-400 transition-transform hover:scale-110"><i class="ph-fill ph-star"></i></button>
+                        <button type="button" onclick="setStarRating(4)" class="star-btn text-2xl text-amber-400 transition-transform hover:scale-110"><i class="ph-fill ph-star"></i></button>
+                        <button type="button" onclick="setStarRating(5)" class="star-btn text-2xl text-amber-400 transition-transform hover:scale-110"><i class="ph-fill ph-star"></i></button>
+                        <span id="starRatingLabel" class="text-xs text-nori-muted ml-2">5 ดาว (ประทับใจมาก)</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-nori-text mb-1.5">ข้อความรีวิว <span class="text-pink-500">*</span></label>
+                    <textarea id="reviewCommentInput" required rows="3" placeholder="เล่าความประทับใจของคุณ..." 
+                              class="w-full px-4 py-2.5 rounded-2xl bg-nori-bg border border-purple-100 focus:border-pink-300 focus:outline-none text-sm resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-nori-text mb-1.5">ลิงก์รูปภาพประกอบรีวิว (ไม่บังคับ)</label>
+                    <div class="flex gap-2">
+                        <input type="url" id="reviewImageInput" placeholder="วาง URL รูปภาพ หรือเว้นว่างไว้" 
+                               class="w-full px-4 py-2 rounded-2xl bg-nori-bg border border-purple-100 focus:border-pink-300 focus:outline-none text-xs">
+                        <button type="button" onclick="fillDemoReviewImage()" class="shrink-0 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-2xl text-xs font-medium">
+                            ใช้รูป Demo
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-nori-muted mt-1">หากยังไม่มีลิงก์รูป สามารถกดปุ่ม "ใช้รูป Demo" เพื่อทดสอบแสดงภาพตัวอย่างได้ค่ะ</p>
+                </div>
+
+                <div class="pt-2 flex gap-2.5">
+                    <button type="button" onclick="closeReviewModal()" class="flex-1 py-2.5 rounded-2xl border border-purple-100 text-nori-muted text-sm font-medium hover:bg-purple-50">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white text-sm font-medium shadow-sm">
+                        บันทึกรีวิว
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL 2: สำหรับแอดมินแก้ไขชื่อเว็บ โลโก้ และแบนเนอร์
+         ========================================== -->
+    <div id="siteSettingModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-purple-950/30 backdrop-blur-sm">
+        <div class="bg-white rounded-[2rem] max-w-md w-full p-6 sm:p-7 shadow-2xl border border-purple-100">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-cute text-xl font-bold text-nori-text flex items-center gap-2">
+                    <i class="ph-fill ph-gear text-purple-500"></i> ตั้งค่าข้อมูลเว็บไซต์ (Admin Demo)
+                </h3>
+                <button onclick="closeSiteModal()" class="w-8 h-8 rounded-full bg-purple-50 hover:bg-purple-100 text-nori-muted flex items-center justify-center">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <form onsubmit="saveSiteSettings(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-nori-text mb-1">ชื่อเว็บไซต์</label>
+                    <input type="text" id="settingSiteName" required 
+                           class="w-full px-4 py-2.5 rounded-2xl bg-nori-bg border border-purple-100 focus:border-purple-400 focus:outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-nori-text mb-1">คำอธิบายใต้ชื่อเว็บ</label>
+                    <input type="text" id="settingSiteTagline" 
+                           class="w-full px-4 py-2.5 rounded-2xl bg-nori-bg border border-purple-100 focus:border-purple-400 focus:outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-nori-text mb-1">URL รูปแบนเนอร์ด้านบน</label>
+                    <input type="url" id="settingBannerUrl" required 
+                           class="w-full px-4 py-2 rounded-2xl bg-nori-bg border border-purple-100 focus:border-purple-400 focus:outline-none text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-nori-text mb-1">URL รูปโลโก้วงกลม</label>
+                    <input type="url" id="settingLogoUrl" required 
+                           class="w-full px-4 py-2 rounded-2xl bg-nori-bg border border-purple-100 focus:border-purple-400 focus:outline-none text-xs">
+                </div>
+
+                <div class="pt-2 flex gap-2.5">
+                    <button type="button" onclick="closeSiteModal()" class="flex-1 py-2.5 rounded-2xl border border-purple-100 text-nori-muted text-sm font-medium hover:bg-purple-50">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="flex-1 py-2.5 rounded-2xl bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium shadow-sm">
+                        บันทึกการเปลี่ยนแปลง
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL 3: ป๊อปอัปดูรูปภาพประกอบรีวิวขนาดเต็ม (Image Preview Lightbox)
+         ========================================== -->
+    <div id="imagePreviewModal" onclick="closeImagePreview(event)" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-purple-950/60 backdrop-blur-sm">
+        <div class="relative bg-white rounded-[2rem] max-w-lg w-full p-4 sm:p-5 shadow-2xl border-2 border-pink-100" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-3 px-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="w-8 h-8 rounded-full bg-pink-100 text-pink-500 flex items-center justify-center shrink-0">
+                        <i class="ph-fill ph-image text-lg"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <h4 id="previewModalTitle" class="font-cute font-bold text-sm sm:text-base text-nori-text truncate">รูปประกอบรีวิว</h4>
+                        <p class="text-[11px] text-nori-muted">คลิกปุ่มกากบาทหรือพื้นที่ด้านนอกเพื่อปิด</p>
+                    </div>
+                </div>
+                <button onclick="closeImagePreview()" class="w-8 h-8 rounded-full bg-purple-50 hover:bg-pink-100 text-nori-muted hover:text-pink-600 flex items-center justify-center transition-colors shrink-0">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+            <div class="rounded-2xl overflow-hidden bg-nori-bg border border-purple-100 max-h-[70vh] flex items-center justify-center">
+                <img id="previewModalImg" src="" alt="รูปประกอบรีวิวขนาดเต็ม" 
+                     onerror="this.src='https://placehold.co/600x340/FDF2F8/9D174D?text=Demo+Image'"
+                     class="w-full h-auto max-h-[70vh] object-contain">
+            </div>
+        </div>
+    </div>
+
+    <!-- กล่องแจ้งเตือน Toast Message แทนการใช้ alert() -->
+    <div id="toastBox" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 translate-y-2">
+        <div class="bg-nori-text text-white px-5 py-2.5 rounded-full shadow-lg text-xs sm:text-sm flex items-center gap-2">
+            <i class="ph-fill ph-check-circle text-pink-300 text-lg"></i>
+            <span id="toastText">บันทึกข้อมูลเรียบร้อยแล้ว</span>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // ข้อมูลเริ่มต้น (จำลองสถานะในหน้าเว็บ)
+        // ==========================================
+        const DEFAULT_IMAGE = "https://i.postimg.cc/DyG5vRsy/Crkh-m-phaerw-s-thth-chi-s-wnt-w.png";
+
+        const initialSiteConfig = {
+            name: "Nori",
+            tagline: "พื้นที่รวมรีวิวความประทับใจและเสียงตอบรับจากลูกค้าที่น่ารักของเรา 🌷✨",
+            bannerUrl: DEFAULT_IMAGE,
+            logoUrl: DEFAULT_IMAGE
+        };
+
+        // ข้อมูลรีวิวเริ่มต้นเพื่อให้สอดคล้องกับตำแหน่งกรอบสี่เหลี่ยมซ้าย-ขวาในภาพแบบร่าง (ครบ 5 กล่องตามแบบร่าง)
+        const initialReviews = [
+            {
+                id: "rev-0",
+                name: "คุณฟ้าใส",
+                date: "วันนี้ • ลูกค้าใหม่",
+                rating: 5,
+                comment: "เข้ามาชมเว็บไซต์แล้วชอบมากค่ะ โทนสีชมพูม่วงพาสเทลดูสบายตา บริการเป็นกันเองและใส่ใจลูกค้าดีมากๆ เลยค่ะ 🌷",
+                avatarColor: "bg-purple-100 text-purple-600",
+                demoImage: ""
+            },
+            {
+                id: "rev-1",
+                name: "คุณแพรวพราว",
+                date: "วันนี้ • ลูกค้าที่ได้รับการยืนยัน",
+                rating: 5,
+                comment: "ประทับใจมากเลยค่ะ แม่ค้าน่ารักพูดจาดีมาก งานละเอียดตรงบรีฟสุดๆ โทนสีชมพูม่วงละมุนถูกใจมากค่ะ ไว้มาอุดหนุนอีกแน่นอน 💖",
+                avatarColor: "bg-pink-100 text-pink-600",
+                demoImage: ""
+            },
+            {
+                id: "rev-2",
+                name: "คุณมินนี่ (Minnie)",
+                date: "เมื่อวานนี้ • ลูกค้าประจำ",
+                rating: 5,
+                comment: "ได้รับงานไวมากค่ะ แพ็กเกจและการดูแลใส่ใจทุกรายละเอียดเลย มีรูปตัวอย่าง Demo แนบมาให้ดูด้วย น่ารักมากๆ เลยค่ะ",
+                avatarColor: "bg-purple-100 text-purple-600",
+                demoImage: "https://placehold.co/600x340/FDF2F8/9D174D?text=Demo+Review+Photo+(Nori)"
+            },
+            {
+                id: "rev-3",
+                name: "คุณเจนนี่",
+                date: "2 วันที่ผ่านมา",
+                rating: 5,
+                comment: "ชอบสไตล์มินิมอลของร้าน Nori มากค่ะ ดูสบายตา ใช้งานง่าย แนะนำเพื่อนๆ ต่อให้แล้วนะคะ 🌸✨",
+                avatarColor: "bg-fuchsia-100 text-fuchsia-600",
+                demoImage: "https://placehold.co/600x340/F3E8FF/6B21A8?text=Demo+Customer+Snapshot"
+            },
+            {
+                id: "rev-4",
+                name: "คุณลูกพีช",
+                date: "3 วันที่ผ่านมา",
+                rating: 5,
+                comment: "ให้เต็ม 5 ดาวเลยค่ะ ตอบแชทไว แก้ไขงานให้ตามที่ขออย่างใจเย็น ประทับใจตั้งแต่ครั้งแรกที่ใช้บริการเลยค่ะ",
+                avatarColor: "bg-rose-100 text-rose-600",
+                demoImage: ""
+            }
+        ];
+
+        let currentMode = 'customer'; // 'customer' | 'admin'
+        let selectedStars = 5;
+        let siteConfig = JSON.parse(localStorage.getItem('nori_site_config')) || { ...initialSiteConfig };
+        let reviewsList = JSON.parse(localStorage.getItem('nori_reviews_list')) || [...initialReviews];
+
+        // ==========================================
+        // ฟังก์ชันแสดงผลหน้าเว็บ (Render UI)
+        // ==========================================
+        function renderSiteHeader() {
+            document.getElementById('siteNameText').textContent = siteConfig.name;
+            document.getElementById('siteTaglineText').textContent = siteConfig.tagline;
+            document.getElementById('siteBannerImg').src = siteConfig.bannerUrl;
+            document.getElementById('siteLogoImg').src = siteConfig.logoUrl;
+        }
+
+        function renderReviews() {
+            const container = document.getElementById('reviewsZigzagContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // คำนวณคะแนนเฉลี่ย
+            const total = reviewsList.length;
+            const avg = total > 0 
+                ? (reviewsList.reduce((sum, item) => sum + Number(item.rating), 0) / total).toFixed(1) 
+                : "5.0";
+            document.getElementById('avgRatingText').textContent = avg;
+            document.getElementById('totalReviewsText').textContent = total;
+
+            // จัดวางการ์ดรีวิวเรียงลำดับสลับซ้าย-ขวา (Zig-Zag) อย่างเป็นระเบียบ
+            // กล่องที่ 1 อยู่ซ้าย, กล่องที่ 2 อยู่ขวา, กล่องที่ 3 อยู่ซ้าย สลับกันไปเรื่อยๆ
+            reviewsList.forEach((item, index) => {
+                const isLeft = index % 2 === 0;
+                const alignClass = isLeft ? 'md:self-start' : 'md:self-end';
+                const badgeSide = isLeft ? 'ซ้าย' : 'ขวา';
+                const cardHTML = createReviewCardHTML(item, alignClass, index + 1, badgeSide);
+                container.insertAdjacentHTML('beforeend', cardHTML);
+            });
+
+            updateAdminControlsVisibility();
+        }
+
+        function createReviewCardHTML(item, alignClass, orderNum, badgeSide) {
+            const starsHTML = Array.from({ length: 5 }, (_, i) => 
+                `<i class="ph-fill ph-star ${i < item.rating ? 'text-amber-400' : 'text-gray-200'} text-sm"></i>`
+            ).join('');
+
+            const initialChar = item.name ? item.name.trim().charAt(0) : 'N';
+            const colorClass = item.avatarColor || 'bg-pink-100 text-pink-600';
+
+            const imageSection = item.demoImage ? `
+                <div class="mt-3 pt-2.5 border-t border-purple-50 flex items-center">
+                    <button type="button" onclick="openImagePreview('${item.id}')" 
+                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-pink-50/90 hover:bg-pink-100/90 text-pink-600 border border-pink-200/70 text-xs font-medium transition-all hover:scale-105 active:scale-95 shadow-sm group/imgbtn">
+                        <span class="w-5 h-5 rounded-full overflow-hidden border border-white shadow-sm shrink-0 bg-purple-100 flex items-center justify-center">
+                            <img src="${escapeHtml(item.demoImage)}" 
+                                 onerror="this.src='https://placehold.co/100x100/FDF2F8/9D174D?text=Img'" 
+                                 alt="ไอคอนรูปแนบ" 
+                                 class="w-full h-full object-cover">
+                        </span>
+                        <i class="ph-fill ph-image text-sm text-purple-500"></i>
+                        <span>ดูรูปแนบ</span>
+                        <i class="ph-bold ph-arrows-out-simple text-[11px] text-nori-muted group-hover/imgbtn:text-pink-600 transition-colors"></i>
+                    </button>
+                </div>
+            ` : '';
+
+            return `
+                <article class="w-full md:w-[56%] ${alignClass} bg-white/95 backdrop-blur-sm rounded-3xl p-5 sm:p-6 shadow-pastel hover:shadow-pastel-hover border border-purple-100/80 card-transition relative group">
+                    <!-- ปุ่มจัดการสำหรับแอดมิน (แก้ไข / ลบ) -->
+                    <div class="admin-only hidden absolute top-4 right-4 flex items-center gap-1.5 bg-white/95 p-1 rounded-full shadow-sm border border-purple-100">
+                        <span class="text-[10px] text-nori-muted px-2 font-medium">#${orderNum} (${badgeSide})</span>
+                        <button onclick="openEditReviewModal('${item.id}')" title="แก้ไขรีวิวนี้" class="w-7 h-7 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-600 flex items-center justify-center transition-colors">
+                            <i class="ph-bold ph-pencil-simple text-xs"></i>
+                        </button>
+                        <button onclick="deleteReview('${item.id}')" title="ลบรีวิวนี้" class="w-7 h-7 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors">
+                            <i class="ph-bold ph-trash text-xs"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full ${colorClass} font-cute font-bold flex items-center justify-center text-sm shrink-0">
+                            ${escapeHtml(initialChar)}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-semibold text-sm sm:text-base text-nori-text truncate">${escapeHtml(item.name)}</h3>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <div class="flex items-center">${starsHTML}</div>
+                                <span class="text-[11px] text-nori-muted truncate">${escapeHtml(item.date)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-sm text-nori-text/90 leading-relaxed whitespace-pre-line">${escapeHtml(item.comment)}</p>
+                    ${imageSection}
+                </article>
+            `;
+        }
+
+        // ==========================================
+        // สลับโหมด ลูกค้า <-> แอดมิน
+        // ==========================================
+        function switchMode(mode) {
+            currentMode = mode;
+            const btnCustomer = document.getElementById('btnCustomerView');
+            const btnAdmin = document.getElementById('btnAdminView');
+            const noticeBar = document.getElementById('adminNoticeBar');
+
+            if (mode === 'admin') {
+                btnAdmin.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-sm";
+                btnCustomer.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all text-nori-muted hover:text-nori-text";
+                noticeBar.classList.remove('hidden');
+                showToast("เข้าสู่โหมดแอดมิน (Demo): คลิกปุ่มดินสอหรือรูปกล้องเพื่อแก้ไขได้ทันที");
+            } else {
+                btnCustomer.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all bg-gradient-to-r from-pink-400 to-purple-400 text-white shadow-sm";
+                btnAdmin.className = "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all text-nori-muted hover:text-nori-text";
+                noticeBar.classList.add('hidden');
+                showToast("สลับเป็นมุมมองลูกค้าเรียบร้อย");
+            }
+
+            updateAdminControlsVisibility();
+        }
+
+        function updateAdminControlsVisibility() {
+            const adminElements = document.querySelectorAll('.admin-only');
+            adminElements.forEach(el => {
+                if (currentMode === 'admin') {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+        }
+
+        // ==========================================
+        // ฟังก์ชันจัดการรีวิว (เพิ่ม / แก้ไข / ลบ)
+        // ==========================================
+        function openReviewModal() {
+            document.getElementById('editReviewId').value = '';
+            document.getElementById('reviewModalTitle').innerHTML = '<i class="ph-fill ph-ShootingStar text-pink-400"></i> เขียนรีวิวความประทับใจ';
+            document.getElementById('reviewerNameInput').value = '';
+            document.getElementById('reviewCommentInput').value = '';
+            document.getElementById('reviewImageInput').value = '';
+            setStarRating(5);
+
+            const modal = document.getElementById('reviewModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function openEditReviewModal(reviewId) {
+            const target = reviewsList.find(r => r.id === reviewId);
+            if (!target) return;
+
+            document.getElementById('editReviewId').value = target.id;
+            document.getElementById('reviewModalTitle').innerHTML = '<i class="ph-fill ph-pencil-circle text-purple-500"></i> แก้ไขรีวิว (Admin)';
+            document.getElementById('reviewerNameInput').value = target.name;
+            document.getElementById('reviewCommentInput').value = target.comment;
+            document.getElementById('reviewImageInput').value = target.demoImage || '';
+            setStarRating(target.rating);
+
+            const modal = document.getElementById('reviewModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeReviewModal() {
+            const modal = document.getElementById('reviewModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function setStarRating(rating) {
+            selectedStars = rating;
+            const buttons = document.querySelectorAll('#starSelector .star-btn');
+            buttons.forEach((btn, idx) => {
+                if (idx < rating) {
+                    btn.classList.remove('text-gray-200');
+                    btn.classList.add('text-amber-400');
+                } else {
+                    btn.classList.remove('text-amber-400');
+                    btn.classList.add('text-gray-200');
+                }
+            });
+            const labels = ["1 ดาว", "2 ดาว", "3 ดาว", "4 ดาว (ดีมาก)", "5 ดาว (ประทับใจมาก)"];
+            document.getElementById('starRatingLabel').textContent = labels[rating - 1];
+        }
+
+        function fillDemoReviewImage() {
+            document.getElementById('reviewImageInput').value = "https://placehold.co/600x340/FCE7F3/9333EA?text=Demo+Review+Image+(Nori)";
+        }
+
+        function submitReviewForm(event) {
+            event.preventDefault();
+            const editId = document.getElementById('editReviewId').value;
+            const name = document.getElementById('reviewerNameInput').value.trim();
+            const comment = document.getElementById('reviewCommentInput').value.trim();
+            const demoImage = document.getElementById('reviewImageInput').value.trim();
+
+            if (!name || !comment) return;
+
+            if (editId) {
+                // แก้ไขรีวิวเดิม
+                reviewsList = reviewsList.map(item => {
+                    if (item.id === editId) {
+                        return { ...item, name, comment, rating: selectedStars, demoImage };
+                    }
+                    return item;
+                });
+                showToast("อัปเดตข้อมูลรีวิวเรียบร้อยแล้ว");
+            } else {
+                // เพิ่มรีวิวใหม่
+                const nextColumn = reviewsList.length % 2 === 0 ? 'right' : 'left';
+                const newReview = {
+                    id: 'rev-' + Date.now(),
+                    column: nextColumn,
+                    name,
+                    date: "เมื่อสักครู่ • รีวิวใหม่",
+                    rating: selectedStars,
+                    comment,
+                    avatarColor: "bg-pink-100 text-pink-600",
+                    demoImage
+                };
+                reviewsList.unshift(newReview);
+                showToast("ขอบคุณสำหรับรีวิวน่ารักๆ นะคะ 💖");
+            }
+
+            localStorage.setItem('nori_reviews_list', JSON.stringify(reviewsList));
+            renderReviews();
+            closeReviewModal();
+        }
+
+        function deleteReview(reviewId) {
+            reviewsList = reviewsList.filter(item => item.id !== reviewId);
+            localStorage.setItem('nori_reviews_list', JSON.stringify(reviewsList));
+            renderReviews();
+            showToast("ลบการ์ดรีวิวเรียบร้อยแล้ว");
+        }
+
+        // ==========================================
+        // ฟังก์ชันเปิด/ปิดป๊อปอัปดูรูปภาพประกอบรีวิวขนาดเต็ม
+        // ==========================================
+        function openImagePreview(reviewId) {
+            const target = reviewsList.find(r => r.id === reviewId);
+            if (!target || !target.demoImage) return;
+
+            const modal = document.getElementById('imagePreviewModal');
+            const imgEl = document.getElementById('previewModalImg');
+            const titleEl = document.getElementById('previewModalTitle');
+
+            imgEl.src = target.demoImage;
+            titleEl.textContent = `รูปประกอบรีวิวจาก ${target.name}`;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeImagePreview(event) {
+            const modal = document.getElementById('imagePreviewModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // ==========================================
+        // ฟังก์ชันตั้งค่าเว็บไซต์สำหรับแอดมิน (ชื่อเว็บ / รูปภาพ)
+        // ==========================================
+        function openSiteModal(focusField) {
+            document.getElementById('settingSiteName').value = siteConfig.name;
+            document.getElementById('settingSiteTagline').value = siteConfig.tagline;
+            document.getElementById('settingBannerUrl').value = siteConfig.bannerUrl;
+            document.getElementById('settingLogoUrl').value = siteConfig.logoUrl;
+
+            const modal = document.getElementById('siteSettingModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            setTimeout(() => {
+                if (focusField === 'name') document.getElementById('settingSiteName').focus();
+                if (focusField === 'banner') document.getElementById('settingBannerUrl').focus();
+                if (focusField === 'logo') document.getElementById('settingLogoUrl').focus();
+            }, 100);
+        }
+
+        function closeSiteModal() {
+            const modal = document.getElementById('siteSettingModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function saveSiteSettings(event) {
+            event.preventDefault();
+            siteConfig.name = document.getElementById('settingSiteName').value.trim() || "Nori";
+            siteConfig.tagline = document.getElementById('settingSiteTagline').value.trim();
+            siteConfig.bannerUrl = document.getElementById('settingBannerUrl').value.trim() || DEFAULT_IMAGE;
+            siteConfig.logoUrl = document.getElementById('settingLogoUrl').value.trim() || DEFAULT_IMAGE;
+
+            localStorage.setItem('nori_site_config', JSON.stringify(siteConfig));
+            renderSiteHeader();
+            closeSiteModal();
+            showToast("บันทึกการตั้งค่าเว็บไซต์เรียบร้อยแล้ว");
+        }
+
+        function resetDemoData() {
+            localStorage.removeItem('nori_site_config');
+            localStorage.removeItem('nori_reviews_list');
+            siteConfig = { ...initialSiteConfig };
+            reviewsList = [...initialReviews];
+            renderSiteHeader();
+            renderReviews();
+            showToast("รีเซ็ตข้อมูลกลับเป็นค่าเริ่มต้นเรียบร้อย");
+        }
+
+        // ==========================================
+        // ฟังก์ชันเสริม (Toast & Escape HTML)
+        // ==========================================
+        let toastTimer;
+        function showToast(message) {
+            const toastBox = document.getElementById('toastBox');
+            document.getElementById('toastText').textContent = message;
+            toastBox.classList.remove('opacity-0', 'translate-y-2');
+            toastBox.classList.add('opacity-100', 'translate-y-0');
+
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toastBox.classList.add('opacity-0', 'translate-y-2');
+                toastBox.classList.remove('opacity-100', 'translate-y-0');
+            }, 2800);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // เริ่มต้นทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        window.onload = function () {
+            renderSiteHeader();
+            renderReviews();
+        };
+    </script>
+</body>
+</html>
